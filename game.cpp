@@ -17,7 +17,9 @@ struct Square{
     Piece piece;
     Color color;
     vector<pair<int, int>> moves;
-    bool hasMoved;
+    bool hasMoved;    // required for pawns/castling
+    bool isProtected; // required for king moveset
+    bool pessantable;  // required for en pessant
 };
 
 
@@ -137,7 +139,7 @@ public:
 
 class Moves{
 public:
-    static vector<pair<int, int>> getMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getMoves(Square (*board)[8], int row, int col){
         Square square = board[row][col];
 
         switch(square.piece){
@@ -152,19 +154,36 @@ public:
     }
 
 
-    static vector<pair<int, int>> getPawnMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getPawnMoves(Square (*board)[8], int row, int col){
+        vector<pair<int, int>> res;
         Square square = board[row][col];
+        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
+        int offset = (square.color == Color::black) ? 1 : -1;
         
+        for(int i = 1; i < 2 + square.hasMoved; i++){
+            int newRow = row + (i * offset);
+            int newCol = col + (i * offset);
 
+            if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
+                break;
+            }
+
+            Square curr = board[newRow][newCol];
+            if(curr.piece == Piece::empty){
+                res.push_back({newRow, newCol});
+            } else{
+                break;
+            }
+        }   
     }
 
 
-    static vector<pair<int, int>> getRookMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getRookMoves(Square (*board)[8], int row, int col){
         vector<pair<int, int>> res;
         Square square = board[row][col];
-        Color oppositeColor = (square.color == none) ? none : (square.color == black) ? white : black;
+        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
 
-        const int directions[4][2] = {
+        const int directions[4][2] = {  
             {-1, 0}, // North
             {0, 1},  // East
             {1, 0},  // South
@@ -183,12 +202,13 @@ public:
                 }
 
                 Square curr = board[newRow][newCol];
-                if(curr.color == none){
+                if(curr.color == Color::none){
                     res.push_back({newRow, newCol});
                 } else if(curr.color == oppositeColor){
                     res.push_back({newRow, newCol});
                     break;
                 } else{
+                    board[row][col].isProtected = true;
                     break;
                 }
 
@@ -200,16 +220,16 @@ public:
     }
 
 
-    static vector<pair<int, int>> getKnightMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getKnightMoves(Square (*board)[8], int row, int col){
         Square square = board[row][col];
 
     }
 
 
-    static vector<pair<int, int>> getBishopMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getBishopMoves(Square (*board)[8], int row, int col){
         vector<pair<int, int>> res;
         Square square = board[row][col];
-        Color oppositeColor = (square.color == none) ? none : (square.color == black) ? white : black;
+        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
 
         const int directions[4][2] = {
             {-1, -1}, // Northwest
@@ -230,12 +250,13 @@ public:
                 }
 
                 Square curr = board[newRow][newCol];
-                if(curr.color == none){
+                if(curr.color == Color::none){
                     res.push_back({newRow, newCol});
                 } else if(curr.color == oppositeColor){
                     res.push_back({newRow, newCol});
                     break;
                 } else{
+                    board[row][col].isProtected = true;
                     break;
                 }
 
@@ -247,7 +268,7 @@ public:
     }
 
 
-    static vector<pair<int, int>> getQueenMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getQueenMoves(Square (*board)[8], int row, int col){
         vector<pair<int, int>> rookMoves = getRookMoves(board, row, col);
         vector<pair<int, int>> bishopMoves = getBishopMoves(board, row, col);
         
@@ -256,10 +277,10 @@ public:
     }
 
 
-    static vector<pair<int, int>> getKingMoves(Square board[8][8], int row, int col){
+    static vector<pair<int, int>> getKingMoves(Square (*board)[8], int row, int col){
         vector<pair<int, int>> res;
         Square square = board[row][col];
-        Color oppositeColor = (square.color == none) ? none : (square.color == black) ? white : black;
+        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
         bool valid[8][8] = {true};
 
         const int directions[8][2] = {
@@ -277,7 +298,7 @@ public:
             for(int x = 0; x < 8; x++){
                 Square curr = board[y][x];
 
-                if(curr.color == none){
+                if(curr.color == Color::none){
                     res.push_back({y, x});
                 } else if(curr)
             }
