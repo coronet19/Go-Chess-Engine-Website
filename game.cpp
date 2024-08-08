@@ -2,16 +2,24 @@
 #include <iostream>
 #include <vector>
 
+// #include "game.h"
+// #include "board.h"
+// #include "moves.h"
+// #include "board.cpp"
+
 using namespace std;
 
 
+
 enum Piece{
-    empty, pawn, rook, knight, bishop, queen, king
+    none, pawn, rook, knight, bishop, queen, king
 };
+
 
 enum Color{
     none, white, black
 };
+
 
 struct Square{
     Piece piece;
@@ -19,57 +27,51 @@ struct Square{
     vector<pair<int, int>> moves;
     bool hasMoved;    // required for pawns/castling
     bool isProtected; // required for king moveset
-    bool pessantable;  // required for en pessant
+    bool isPessantable;  // required for en pessant
+
+
+    Square(Piece p = Piece::none, Color c = Color::none, vector<pair<int, int>> m = {}, bool moved = false, bool protected_ = false, bool pessantable = false)
+        : piece(p), color(c), moves(m), hasMoved(moved), isProtected(protected_), isPessantable(pessantable) {}
 };
 
 
-class Game{
+
+class Board{
 private:
     Square board[8][8];
 
+
 public:
-    Game(){
-        // initializes the board with the starting pieces
+    Board(){
         for(int row = 0; row < 8; row++){
             for(int col = 0; col < 8; col++){
-                if(row == 1){
-                    board[row][col] = { Piece::pawn, Color::black, { {}, {} }, false };
-                } else if(row == 6){
-                    board[row][col] = { Piece::pawn, Color::white, { {}, {} }, false };
-                } else{
-                    board[row][col] = { Piece::empty, Color::none };
+                switch(row){
+                    case 1:  board[row][col] = Square(Piece::pawn, Color::black); break;
+                    case 6:  board[row][col] = Square(Piece::pawn, Color::white); break;
+                    default: board[row][col] = Square(); break;
                 }
             }
         }
 
-        board[0][0] = { rook, black, {}, false };
-        board[0][1] = { knight, black, {}, false };
-        board[0][2] = { bishop, black, {}, false };
-        board[0][3] = { queen, black, {}, false };
-        board[0][4] = { king, black, {}, false };
-        board[0][5] = { bishop, black, {}, false };
-        board[0][6] = { knight, black, {}, false };
-        board[0][7] = { rook, black, {}, false };
+        board[0][0] = Square(Piece::rook, Color::black);
+        board[0][1] = Square(Piece::knight, Color::black);
+        board[0][2] = Square(Piece::bishop, Color::black);
+        board[0][3] = Square(Piece::queen, Color::black);
+        board[0][4] = Square(Piece::king, Color::black);
+        board[0][5] = Square(Piece::bishop, Color::black);
+        board[0][6] = Square(Piece::knight, Color::black);
+        board[0][7] = Square(Piece::rook, Color::black);
 
-        board[7][0] = { rook, white, {}, false };
-        board[7][1] = { knight, white, {}, false };
-        board[7][2] = { bishop, white, {}, false };
-        board[7][3] = { queen, white, {}, false };
-        board[7][4] = { king, white, {}, false };
-        board[7][5] = { bishop, white, {}, false };
-        board[7][6] = { knight, white, {}, false };
-        board[7][7] = { rook, white, {}, false };
+        board[7][0] = Square(Piece::rook, Color::white);
+        board[7][1] = Square(Piece::knight, Color::white);
+        board[7][2] = Square(Piece::bishop, Color::white);
+        board[7][3] = Square(Piece::queen, Color::white);
+        board[7][4] = Square(Piece::king, Color::white);
+        board[7][5] = Square(Piece::bishop, Color::white);
+        board[7][6] = Square(Piece::knight, Color::white);
+        board[7][7] = Square(Piece::rook, Color::white);
 
-        calculateMoves();
-    }
-
-
-    void calculateMoves(){
-        for(int row = 0; row < 8; row++){
-            for(int col = 0; col < 8; col++){
-                board[row][col].moves = Moves::getMoves(board, row, col);
-            }
-        }
+        Moves::calculateMoves(board);
     }
 
 
@@ -96,7 +98,7 @@ public:
                 switch(square.color){
                     case white: color = 'W'; break;
                     case black: color = 'B'; break;
-                    default: color = '.'; break;
+                    default: color = '.'; break; 
                 }
 
                 res = res + color + piece + ',';
@@ -137,18 +139,81 @@ public:
 };
 
 
+
 class Moves{
 public:
+    static void calculateMoves(Square (*board)[8]){
+        pair<int, int> whiteKing;
+        pair<int, int> blackKing;
+
+        for(int row = 0; row < 8; row++){
+            for(int col = 0; col < 8; col++){
+                board[row][col].isProtected = false;
+            }
+        }
+
+        for(int row = 0; row < 8; row++){
+            for(int col = 0; col < 8; col++){
+                if(board[row][col].piece == Piece::king){
+                    if(board[row][col].color == Color::black){
+                        blackKing = {row, col};
+                    } else{
+                        whiteKing = {row, col};
+                    }
+                } else{
+                    board[row][col].moves = Moves::getMoves(board, row, col);
+                }
+            }
+        }
+
+        Moves::getMoves(board, whiteKing.first, whiteKing.second);
+        Moves::getMoves(board, blackKing.first, blackKing.second);
+
+        Moves::resolveKingMoves(board, blackKing, whiteKing);
+    }
+
+
+    // removes similar moves from both kings possible moves
+    // suboptimal O(n^2) approach but 16^2 is small so meh
+    static void resolveKingMoves(Square (*board)[8], pair<int, int> blackKingPosition, pair<int, int> whiteKingPosition){
+        Square blackKing = board[blackKingPosition.first][blackKingPosition.second];
+        Square whiteKing = board[whiteKingPosition.first][whiteKingPosition.second];
+
+        vector<pair<int, int>> newBlackKingMoves;
+        vector<pair<int, int>> newWhiteKingMoves;
+
+        for(const auto& blackMove : blackKing.moves){
+            for(const auto& whiteMove : whiteKing.moves){
+                if(blackMove != whiteMove){
+                    newBlackKingMoves.push_back(blackMove);
+                }
+            }
+        }
+
+        for(const auto& whiteMove : whiteKing.moves){
+            for(const auto& blackMove : blackKing.moves){
+                if(whiteMove != blackMove){
+                    newWhiteKingMoves.push_back(whiteMove);
+                }
+            }
+        }
+
+        board[blackKingPosition.first][blackKingPosition.second].moves = newBlackKingMoves;
+        board[whiteKingPosition.first][whiteKingPosition.second].moves = newWhiteKingMoves;
+    }
+
+
+private:
     static vector<pair<int, int>> getMoves(Square (*board)[8], int row, int col){
         Square square = board[row][col];
 
         switch(square.piece){
-            case pawn: return getPawnMoves(board, row, col);
-            case rook: return getRookMoves(board, row, col);
-            case knight: return getKnightMoves(board, row, col);
-            case bishop: return getBishopMoves(board, row, col);
-            case queen: return getQueenMoves(board, row, col);
-            case king: return getKingMoves(board, row, col);
+            case Piece::pawn: return getPawnMoves(board, row, col);
+            case Piece::rook: return getRookMoves(board, row, col);
+            case Piece::knight: return getKnightMoves(board, row, col);
+            case Piece::bishop: return getBishopMoves(board, row, col);
+            case Piece::queen: return getQueenMoves(board, row, col);
+            case Piece::king: return getKingMoves(board, row, col);
             default: return {};
         }
     }
@@ -157,7 +222,7 @@ public:
     static vector<pair<int, int>> getPawnMoves(Square (*board)[8], int row, int col){
         vector<pair<int, int>> res;
         Square square = board[row][col];
-        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
+        Color oppositeColor = (square.color == Color::black) ? Color::white : Color::black;
         int offset = (square.color == Color::black) ? 1 : -1;
         
         for(int i = 1; i < 2 + square.hasMoved; i++){
@@ -169,12 +234,35 @@ public:
             }
 
             Square curr = board[newRow][newCol];
-            if(curr.piece == Piece::empty){
+            if(curr.piece == Piece::none){
                 res.push_back({newRow, newCol});
             } else{
                 break;
             }
-        }   
+        }
+
+        // for capturing pieces
+        const int directions[2][2] = {
+            {1 * offset, -1},
+            {1 * offset, 1}
+        };
+
+        for(const auto& dir : directions){
+            int newRow = row + dir[0];
+            int newCol = col + dir[1];
+
+            if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
+                break;
+            }
+
+            Square curr = board[newRow][newCol];
+            Square curr = board[newRow][newCol];
+            if(curr.color == Color::none || curr.color == oppositeColor){
+                res.push_back({newRow, newCol});
+            } else{
+                board[row][col].isProtected = true;
+            }
+        }
     }
 
 
@@ -221,8 +309,38 @@ public:
 
 
     static vector<pair<int, int>> getKnightMoves(Square (*board)[8], int row, int col){
+        vector<pair<int, int>> res;
         Square square = board[row][col];
+        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
 
+        const int directions[8][2] = {
+            {-2, -1},
+            {-2, 1},
+            {-1, 2},
+            {1, 2},
+            {2, 1},
+            {2, -1},
+            {1, -2},
+            {-1, -2}
+        };
+
+        for(const auto& dir : directions){
+            int newRow = row + dir[0];
+            int newCol = col + dir[1];
+
+            if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
+                break;
+            }
+
+            Square curr = board[newRow][newCol];
+            if(curr.color == Color::none || curr.color == oppositeColor){
+                res.push_back({newRow, newCol});
+            } else{
+                board[row][col].isProtected = true;
+            }
+        }
+
+        return res;
     }
 
 
@@ -280,7 +398,7 @@ public:
     static vector<pair<int, int>> getKingMoves(Square (*board)[8], int row, int col){
         vector<pair<int, int>> res;
         Square square = board[row][col];
-        Color oppositeColor = (square.color == black) ? Color::white : Color::black;
+        Color oppositeColor = (square.color == Color::black) ? Color::white : Color::black;
         bool valid[8][8] = {true};
 
         const int directions[8][2] = {
@@ -294,22 +412,45 @@ public:
             {0, -1}   // West
         };
 
-        for(int y = 0; y < 8; y++){
-            for(int x = 0; x < 8; x++){
-                Square curr = board[y][x];
+        for(int newRow = 0; newRow < 8; newRow++){
+            for(int newCol = 0; newCol < 8; newCol++){
+                Square curr = board[newRow][newCol];
 
-                if(curr.color == Color::none){
-                    res.push_back({y, x});
-                } else if(curr)
+                if(curr.color == square.color){
+                    valid[newRow][newCol] = false;
+                } else if(curr.color == oppositeColor && curr.isProtected){
+                    valid[newRow][newCol] = false;
+                }
             }
         }
+
+        for(const auto& dir : directions){
+            int newRow = row + dir[0];
+            int newCol = col + dir[1];
+
+            if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
+                break;
+            }
+
+            if(valid[newRow][newCol]){
+                res.push_back({newRow, newCol});
+            } 
+        }
+
+        return res;
     }
 };
 
 
 
+
+
+
+
+
+
 int main(){
-    Game* game = new Game();
+    Board* game = new Board();
 
     game->printBoard();
     cout << game->toString();
