@@ -6,7 +6,8 @@
 using namespace std;
 
 
-
+// TODO: account for piece protection in every function
+// account for pawn moveset in king moveset
 
 void Moves::calculateMoves(Square (*board)[8]) {
     pair<int, int> whiteKing;
@@ -84,20 +85,24 @@ vector<pair<int, int>> Moves::getMoves(Square (*board)[8], int row, int col){
 }
 
 
-// unfinished, add en pessant
 vector<pair<int, int>> Moves::getPawnMoves(Square (*board)[8], int row, int col){
     vector<pair<int, int>> res;
     Square square = board[row][col];
     Color oppositeColor = (square.color == Color::black) ? Color::white : Color::black;
     int offset = (square.color == Color::black) ? 1 : -1;
+
+    const int directions[2][2] = {
+        {1 * offset, -1},
+        {1 * offset, 1}
+    };
     
-    // for moving forward
+    // moving forward
     for(int i = 1; i < 2 + square.hasMoved; i++){
         int newRow = row + (i * offset);
         int newCol = col + (i * offset);
 
         if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
-            break;
+            continue;
         }
 
         Square curr = board[newRow][newCol];
@@ -108,22 +113,17 @@ vector<pair<int, int>> Moves::getPawnMoves(Square (*board)[8], int row, int col)
         }
     }
 
-    // for capturing pieces
-    const int directions[2][2] = {
-        {1 * offset, -1},
-        {1 * offset, 1}
-    };
-
+    // capturing pieces/en pessant
     for(const auto& dir : directions){
         int newRow = row + dir[0];
         int newCol = col + dir[1];
 
         if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
-            break;
+            continue;
         }
 
         Square curr = board[newRow][newCol];
-        if(curr.color == Color::none || curr.color == oppositeColor){
+        if((curr.color == Color::none && board[row][newCol].isPessantable) || curr.color == oppositeColor){
             res.push_back({newRow, newCol});
         } else{
             board[row][col].isProtected = true;
@@ -197,7 +197,7 @@ vector<pair<int, int>> Moves::getKnightMoves(Square (*board)[8], int row, int co
         int newCol = col + dir[1];
 
         if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
-            break;
+            continue;
         }
 
         Square curr = board[newRow][newCol];
@@ -281,6 +281,11 @@ vector<pair<int, int>> Moves::getKingMoves(Square (*board)[8], int row, int col)
         {0, -1}   // West
     };
 
+    const int pawnDirections[2][2] = {
+        {1, -1},
+        {1, 1}
+    };
+
     for(int newRow = 0; newRow < 8; newRow++){
         for(int newCol = 0; newCol < 8; newCol++){
             Square curr = board[newRow][newCol];
@@ -298,7 +303,7 @@ vector<pair<int, int>> Moves::getKingMoves(Square (*board)[8], int row, int col)
         int newCol = col + dir[1];
 
         if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
-            break;
+            continue;
         }
 
         if(valid[newRow][newCol]){
