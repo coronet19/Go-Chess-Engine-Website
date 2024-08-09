@@ -2,9 +2,9 @@
 #define BOARD_H
 
 #include <iostream>
-#include <vector>
+#include <string>
+
 #include "boardUtils.h"
-#include "Moves.h"
 
 
 
@@ -23,6 +23,8 @@ public:
 
     // Prints board to stdout
     void printBoard();
+
+    void printPieceMoves();
 };
 
 #endif // BOARD_H

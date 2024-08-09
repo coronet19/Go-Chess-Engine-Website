@@ -22,7 +22,7 @@ struct Square {
     Piece piece;
     Color color;
     std::vector<std::pair<int, int>> moves;
-    bool hasMoved;       // Required for pawns/castling
+    bool hasMoved;       // required for castling, also used for pawns bc im braindead (starting square is constant)
     bool isProtected;    // Required for king moveset
     bool isPessantable;  // Required for en passant
 

@@ -9,7 +9,8 @@ int main(){
     Board* game = new Board();
 
     game->printBoard();
-    cout << game->toString();
+    cout << game->toString() << endl;
+    game->printPieceMoves();
 
     return 0;
 }

@@ -1,5 +1,3 @@
-#include <vector>
-
 #include "moves.cpp"
 #include "boardUtils.h"
 #include "board.h"
@@ -101,5 +99,49 @@ void Board::printBoard(){
         }
 
         cout << endl;
+    }
+}
+
+
+void Board::printPieceMoves(){
+    for(int row = 0; row < 8; row++){
+        for(int col = 0; col < 8; col++){
+            Square square = board[row][col];
+            char color = '.';
+            char piece = '.';
+
+            switch(square.color){
+                case Color::white: color = 'W'; break;
+                case Color::black: color = 'B'; break;
+                default: break;
+            }
+
+            switch (square.piece){
+                case Piece::pawn: piece = 'P'; break;
+                case Piece::rook: piece = 'R'; break;
+                case Piece::knight: piece = 'N'; break;
+                case Piece::bishop: piece = 'B'; break;
+                case Piece::queen: piece = 'Q'; break;
+                case Piece::king: piece = 'K'; break;
+                default: break;
+            }
+
+            if(color == '.' || piece == '.'){
+                continue;
+            }
+
+            cout << "Piece: " << color << piece << ", Pos: (" << row << ", " << col << "), Moves: ";
+
+            for(int i = 0; i < square.moves.size(); i++){
+                pair<int, int> move = square.moves[i];
+                cout << "(" << move.first << ", " << move.second << ")";
+
+                if(i < square.moves.size() - 1){
+                    cout << ", ";
+                }
+            }
+
+            cout << endl;
+        }
     }
 }
