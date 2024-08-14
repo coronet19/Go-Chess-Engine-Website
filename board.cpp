@@ -1,5 +1,4 @@
 #include "moves.cpp"
-#include "boardUtils.h"
 #include "board.h"
 
 using namespace std;
@@ -36,7 +35,47 @@ Board::Board() {
     board[7][6] = Square(Piece::knight, Color::white);
     board[7][7] = Square(Piece::rook, Color::white);
 
+    board[4][4] = Square(Piece::pawn, Color::white);
+    board[6][4] = Square();
+
     Moves::calculateMoves(board);
+}
+
+
+// factor in rooks/kings being moved or not
+Board::Board(string boardStr){
+    for(int i = 0; i < 64; i++){
+        Color c = Color::none;
+        Piece p = Piece::none;
+
+        switch(boardStr[i * 3]){
+            case 'B': c = Color::black; break;
+            case 'W': c = Color::white; break;
+            default: break;
+        }
+
+        switch(boardStr[i * 3 + 1]){
+            case 'P': p = Piece::pawn; break;
+            case 'R': p = Piece::rook; break;
+            case 'N': p = Piece::knight; break;
+            case 'B': p = Piece::bishop; break;
+            case 'Q': p = Piece::queen; break;
+            case 'K': p = Piece::king; break;
+            default: break;
+        }   
+
+        if(c == Color::none || p == Piece::none){
+            continue;
+        }
+
+        Square s;
+
+        if(c == Color::white){
+
+        } else if(c == Color::black){
+
+        }
+    }
 }
 
 

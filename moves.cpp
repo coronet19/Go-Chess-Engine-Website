@@ -1,17 +1,11 @@
-#include "boardUtils.h"
+#include "board.h"
 #include "moves.h"
 #include <unordered_map>
-
-#include <iostream>
 
 using namespace std;
 
 
-// --------------------------- TODO ---------------------------
-// make function that looks for possible self checks with moves:
-//  - check kings rows, cols, and diags for same color pieces,
-//  - if same color piece found between king and enemy rook/bishop/queen,
-//    strip all moves from that defending piece
+
 
 void Moves::calculateMoves(Square (*board)[8]) {
     pair<int, int> whiteKing;
@@ -42,16 +36,13 @@ void Moves::calculateMoves(Square (*board)[8]) {
 
     resolveConflictingKingMoves(board, blackKing, whiteKing);
 
-    cout << "here0";
     resolveSelfChecks(board, blackKing);
     resolveSelfChecks(board, whiteKing);
 }
 
 
 vector<pair<int, int>> Moves::getMoves(Square (*board)[8], int row, int col){
-    Square square = board[row][col];
-
-    switch(square.piece){
+    switch(board[row][col].piece){
         case Piece::pawn: return getPawnMoves(board, row, col);
         case Piece::rook: return getRookMoves(board, row, col);
         case Piece::knight: return getKnightMoves(board, row, col);
@@ -68,6 +59,13 @@ vector<pair<int, int>> Moves::getPawnMoves(Square (*board)[8], int row, int col)
     Square square = board[row][col];
     Color oppositeColor = (square.color == Color::black) ? Color::white : Color::black;
     int offset = (square.color == Color::black) ? 1 : -1;
+    int hasNotMovedBonus = 0;
+
+    if(square.color == Color::black && row == 1){
+        hasNotMovedBonus++;
+    } else if(square.color == Color::white && row == 6){
+        hasNotMovedBonus++;
+    }
 
     const int directions[2][2] = {
         {1 * offset, -1},
@@ -75,7 +73,7 @@ vector<pair<int, int>> Moves::getPawnMoves(Square (*board)[8], int row, int col)
     };
     
     // moving forward
-    for(int i = 1; i < 2 + !square.hasMoved; i++){
+    for(int i = 1; i < 2 + hasNotMovedBonus; i++){
         int newRow = row + (i * offset);
         int newCol = col;
 
@@ -341,13 +339,14 @@ void Moves::resolveConflictingKingMoves(Square (*board)[8], pair<int, int> black
 // looks for possible self checks with moves:
 //  - check kings rows, cols, and diags for same color pieces,
 //  - if same color piece found between king and enemy rook/bishop/queen,
-//    strip all moves from that defending piece
-//
-//
-// also broken apparently
+//    strips invalid moves from that defending piece
 void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
     Square king = board[kingPosition.first][kingPosition.second];
     Color oppositeColor = (king.color == Color::black) ? Color::white : Color::black;
+
+    if(king.piece != Piece::king){
+        throw runtime_error("resolveSelfChecks function called on non-king piece.");
+    }
 
     const int adjacents[4][2] = {   
         {-1, 0},  // North
@@ -363,8 +362,7 @@ void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
         {1, 1}    // Southeast
     };
 
-    // Check for adjacent (orthogonal) directions
-    for (const auto& dir : adjacents){
+    for(const auto& dir : adjacents){
         vector<pair<int, int>> validMoves;
         Square* defendingPiece = nullptr;
         int offset = 1;
@@ -378,22 +376,22 @@ void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
             }
 
             Square curr = board[newRow][newCol];
-
-            if(curr.color == king.color){
-                if(defendingPiece == nullptr){
-                    defendingPiece = &board[newRow][newCol];
+             
+            if(curr.piece != Piece::none){
+                if(curr.color == king.color){
+                    if(defendingPiece == nullptr){
+                        defendingPiece = &board[newRow][newCol];
+                        offset++;
+                        continue;
+                    } else{
+                        break;
+                    }
+                } else if(curr.color == oppositeColor){
+                    if(defendingPiece != nullptr && (curr.piece == Piece::rook || curr.piece == Piece::queen)){
+                        intersectMoves(defendingPiece, validMoves);
+                    }
+                    break;
                 }
-                offset++;
-                continue;
-            }
-
-            if(defendingPiece != nullptr && curr.color == oppositeColor && (curr.piece == Piece::rook || curr.piece == Piece::queen)){
-                intersectMoves(defendingPiece, validMoves);
-                break;
-            }
-
-            if(curr.color == oppositeColor){
-                break;
             }
 
             validMoves.push_back({newRow, newCol});
@@ -401,7 +399,6 @@ void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
         }
     }
 
-    // Check for diagonal directions
     for(const auto& dir : diagonals){
         vector<pair<int, int>> validMoves;
         Square* defendingPiece = nullptr;
@@ -416,22 +413,22 @@ void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
             }
 
             Square curr = board[newRow][newCol];
-
-            if(curr.color == king.color){
-                if(defendingPiece == nullptr){
-                    defendingPiece = &board[newRow][newCol];
+             
+            if(curr.piece != Piece::none){
+                if(curr.color == king.color){
+                    if(defendingPiece == nullptr){
+                        defendingPiece = &board[newRow][newCol];
+                        offset++;
+                        continue;
+                    } else{
+                        break;
+                    }
+                } else if(curr.color == oppositeColor){
+                    if(defendingPiece != nullptr && (curr.piece == Piece::rook || curr.piece == Piece::queen)){
+                        intersectMoves(defendingPiece, validMoves);
+                    }
+                    break;
                 }
-                offset++;
-                continue;
-            }
-
-            if(defendingPiece != nullptr && curr.color == oppositeColor && (curr.piece == Piece::bishop || curr.piece == Piece::queen)){
-                intersectMoves(defendingPiece, validMoves);
-                break;
-            }
-
-            if(curr.color == oppositeColor){
-                break;
             }
 
             validMoves.push_back({newRow, newCol});
@@ -439,93 +436,8 @@ void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
         }
     }
 }
-// void Moves::resolveSelfChecks(Square (*board)[8], pair<int, int> kingPosition){
-//     Square king = board[kingPosition.first][kingPosition.second];
-//     Color oppositeColor = (king.color == Color::black) ? Color::white : Color::black;
-//     Square* defendingPiece = nullptr;
-
-//     const int adjacents[4][2] = {
-//         {-1, 0},  // North
-//         {0, 1},   // East
-//         {1, 0},   // South
-//         {0, -1}   // West
-//     };
-
-//     const int diagonals[4][2] = {
-//         {-1, -1}, // Northwest
-//         {-1, 1},  // Northeast
-//         {1, -1},  // Southwest
-//         {1, 1}   // Southeast
-//     };
-
-//     for(const auto& dir : adjacents){
-//         vector<pair<int, int>> validMoves;
-//         int offset = 1;
-
-//         while(true){
-//             int newRow = offset * dir[0];
-//             int newCol = offset * dir[1];
-
-//             if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
-//                 break;
-//             }
-
-//             Square curr = board[newRow][newCol];
-
-//             if(defendingPiece == nullptr){
-//                 if(curr.color == oppositeColor){
-//                     break;
-//                 } else if(curr.color == king.color){
-//                     defendingPiece = &board[newRow][newCol];
-//                     continue;
-//                 }
-//             } else if(curr.color == oppositeColor && curr.piece == Piece::rook || curr.piece == Piece::queen){
-//                 // This breaks black kingside knight on board initialization.
-//                 // This code block shouldnt even be reached by anything other
-//                 // than 6 specific pawns on board initialization.
-//                 intersectMoves(defendingPiece, validMoves); 
-//                 break;
-//             }
-
-//             offset++;
-//             validMoves.push_back({newRow, newCol});
-//         }
-//     }
-
-//     for(const auto& dir : diagonals){
-//         vector<pair<int, int>> validMoves;
-//         int offset = 1;
-
-//         while(true){
-//             int newRow = offset * dir[0];
-//             int newCol = offset * dir[1];
-
-//             if(newRow < 0 || newRow >= 8 || newCol < 0 || newCol >= 8){
-//                 break;
-//             }
-            
-//             Square curr = board[newRow][newCol];
-
-//             if(defendingPiece == nullptr){
-//                 if(curr.color == oppositeColor){
-//                     break;
-//                 } else if(curr.color == king.color){
-//                     defendingPiece = &board[newRow][newCol];
-//                     continue;
-//                 }
-//             } else if(curr.color == oppositeColor && curr.piece == Piece::bishop || curr.piece == Piece::queen){
-//                 intersectMoves(defendingPiece, validMoves); 
-//                 break;
-//             }
-
-//             offset++;
-//             validMoves.push_back({newRow, newCol});
-//         }
-//     }
-// }
 
 
-// this function does indeed work, look for bugs elsewhere
 void Moves::intersectMoves(Square* piece, vector<pair<int, int>> moves){
     vector<pair<int, int>> validMoves;
     vector<bool> map(64, false);

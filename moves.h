@@ -1,7 +1,7 @@
 #ifndef MOVES_H
 #define MOVES_H
 
-#include "boardUtils.h"
+#include "board.h"
 
 using namespace std;
 

@@ -1,6 +1,6 @@
-#include "board.cpp"
+#include <iostream>
 
-using namespace std;
+#include "board.cpp"
 
 
 
@@ -9,8 +9,10 @@ int main(){
     Board* game = new Board();
 
     game->printBoard();
-    cout << game->toString() << endl;
-    game->printPieceMoves();
+    game->printPieceMoves();    
+    std::cout << game->toString() << endl;
+
+    delete game;
 
     return 0;
 }
